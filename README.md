@@ -1,94 +1,135 @@
-# Nationality & Feature Detection Pipeline
+# Nationality, Emotion, Age & Color Detection
 
-This project is an advanced machine learning pipeline that predicts a person's nationality, emotion, age, and dress color from a single image. It uses a conditional, multi-model approach where the output of the primary model (Nationality) determines which subsequent predictions are made.
+An end-to-end Streamlit app and training scripts that predict a person's Nationality (proxy via UTKFace race label), Emotion, approximate Age, and Dress Color from a single image using TensorFlow/Keras and OpenCV.
 
-The project is built with TensorFlow/Keras and features an interactive web GUI powered by Streamlit.
+## Features
 
-## 🚀 Features
+- Nationality classification (African, Indian, Other, United States)
+- Emotion recognition (7 classes)
+- Age regression (approximate years)
+- Dress color detection (heuristic on clothing region)
+- Streamlit web UI with face detection and conditional logic
 
-* **Multi-Task Prediction:**
-    * **Model 1:** Nationality Classification (Indian, United States, African, Other)
-    * **Model 2:** Emotion Recognition (Happy, Sad, Angry, etc.)
-    * **Model 3:** Age Regression (Predicts approximate age)
-    * **Model 4:** Dress Color Detection (Heuristic-based)
-* **Conditional Logic:** The app provides different outputs based on the predicted nationality, as per the project requirements.
-* **Interactive GUI:** A user-friendly Streamlit interface allows for easy image uploads and provides a clear preview and JSON-formatted results.
+## Project structure
 
-## 📸 Application Screenshot
+```
+app.py
+assets/
+models/
+    haarcascade_frontalface_default.xml
+    (expected) nationality_model.h5, age_model.h5, emotion_model.h5
+model_training/
+    nationality_training.py
+    age_training.py
+    emotion_training.py
+results/
+data/
+    UTKFace/
+```
 
+## Datasets
 
-*(Add a screenshot of your `app.py` running here)*
+1) UTKFace (age, gender, race) for Nationality proxy and Age regression
+     - https://susanqq.github.io/UTKFace/
+2) FER2013 for Emotion recognition
+     - https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge
 
-## 💾 Datasets
+### Ethical note
+Race is used as a proxy for Nationality only for a technical demo. This is a simplification with bias and should not be used as a real predictor of nationality.
 
-1.  **Nationality & Age:** We used the **[UTKFace Dataset](https://susanqq.github.io/UTKFace/)**. This dataset includes over 20,000 images with labels for age, gender, and race.
-2.  **Emotion:** This model was built upon my previous training project, which used the **[FER2013](https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge)** dataset.
+## Setup (Windows, cmd)
 
-### ⚠️ Ethical Considerations & Limitations
+1) Clone
+```cmd
+git clone https://github.com/Mr-J12/nationality-detection.git
+cd nationality-detection
+```
 
-This model uses **Race as a proxy for Nationality**, which is a significant simplification and has inherent limitations. The UTKFace dataset labels for race (`'White'`, `'Black'`, `'Indian'`, `'Asian'`, `'Others'`) were mapped to the required nationalities (`'United States'`, `'African'`, `'Indian'`, `'Other'`). This is not a reliable predictor of actual nationality and is prone to stereotyping and bias. This project should be seen as a technical demonstration of a multi-model pipeline, not as a real-world, accurate nationality detector.
+2) Install dependencies
+```cmd
+python -m pip install -r requirements.txt
+```
 
-## ⚙️ Methodology
+3) Ensure models folder contents
+- Place `models/haarcascade_frontalface_default.xml` (already included here).
+- Place trained models in `models/` as:
+    - `nationality_model.h5`
+    - `age_model.h5`
+    - `emotion_model.h5`
 
-The core of this project is a pipeline of four distinct models/processes that are called sequentially.
+Note: The training scripts save models relative to their script location. If any model was saved under `model_training/models/`, move it into the top-level `models/` folder so the app can find it.
 
-1.  **Face Detection:** First, an OpenCV Haar Cascade classifier detects the primary face in the uploaded image.
-2.  **Model 1: Nationality Classifier:** A fine-tuned `MobileNetV2` model, pre-trained on ImageNet, was trained on the UTKFace 'Race' labels to act as our nationality classifier.
-3.  **Model 2: Emotion Classifier:** The existing CNN model from my training project is used to predict one of 7 emotions from the cropped face.
-4.  **Conditional Execution:** Based on the nationality prediction, the app proceeds:
-    * **If 'Indian':** Runs Model 3 (Age) and Model 4 (Color).
-    * **If 'United States':** Runs Model 3 (Age).
-    * **If 'African':** Runs Model 4 (Color).
-    * **If 'Other':** No further predictions are made.
-5.  **Model 3: Age Estimator:** A second `MobileNetV2` model is used, but as a **regression** model. It is trained on the UTKFace 'Age' labels and outputs a single number.
-6.  **Model 4: Dress Color Detector:** This is a **non-ML heuristic**. It isolates the "clothing region" (an area below the detected face), applies K-Means clustering to the pixels in that region, and identifies the dominant color.
+## Train models (optional)
 
-## 📊 Model Comparison & Results
+All scripts run from the repo root.
 
-This section documents the performance of the *newly trained* models.
+- Nationality (MobileNetV2 transfer learning on UTKFace race → mapped to 4 classes)
+```cmd
+python model_training\nationality_training.py
+```
 
-### Nationality Model Comparison
+- Age (MobileNetV2 regression on UTKFace age)
+```cmd
+python model_training\age_training.py
+```
 
-A simple CNN was compared against a fine-tuned MobileNetV2. Transfer learning provided a significant performance boost.
+- Emotion (CNN on FER2013)
+```cmd
+python model_training\emotion_training.py
+```
 
-| Model | Accuracy | Precision (Macro) | F1-Score (Macro) |
-| :--- | :---: | :---: | :---: |
-| Custom CNN | 74% | 0.72 | 0.73 |
-| **MobileNetV2 (Fine-Tuned)** | **88%** | **0.87** | **0.87** |
+After training, ensure the resulting `.h5` files are placed in `models/` (top-level) for the app.
 
-*(Note: These are sample values. You must replace them with your actual training results.)*
+## Run the app
 
-### Visual Results
+```cmd
+streamlit run app.py
+```
+Then open http://localhost:8501 in your browser.
 
-#### Nationality Confusion Matrix
-![Nationality Confusion Matrix](assets/confusion_matrix_nationality.png)
-*(Save your plot from the notebook to `assets/` and link it here)*
+## Results (from training runs)
 
-#### Age Prediction Scatter Plot
-![Age Prediction Plot](assets/age_scatter_plot.png)
-*(This plot shows Predicted Age vs. True Age. A good model is close to the y=x line. Our final MAE was ~4.5 years.)*
+### Nationality
+- Accuracy/Loss curves
+    - ![Nationality Accuracy](assets/nationality_model_accy.png)
+    - ![Nationality Loss](assets/nationality_model_loss.png)
+- Confusion Matrix & Report
+    - ![Nationality Confusion](assets/nationality_model_confusionmatrix.png)
+    - ![Nationality Classification Report](assets/nationality_classification_report.png)
+- Class distribution (dataset)
+    - ![Nationality Distribution](assets/nationality_distribution..png)
 
-## 🚀 How to Run Locally
+### Emotion
+- Accuracy/Loss curves
+    - ![Emotion Accuracy](assets/emotion_model_accy.png)
+    - ![Emotion Loss](assets/emotion_model_loss.png)
+- Confusion Matrix & Report
+    - ![Emotion Confusion](assets/emotion_model_confusionmatrix.png)
+    - ![Emotion Classification Report](assets/emotion_model_classiificationreport.png)
 
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/YourUsername/Nationality-Detection-Project.git](https://github.com/YourUsername/Nationality-Detection-Project.git)
-    cd Nationality-Detection-Project
-    ```
-2.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Download prerequisites:**
-    * Download `haarcascade_frontalface_default.xml` from the [OpenCV GitHub repo](https://github.com/opencv/opencv/blob/master/data/haarcascades/haarcascade_frontalface_default.xml).
-    * Place it inside the `models/` folder.
-4.  **Train your models:**
-    * Download the **UTKFace** dataset and place it in a `data/` folder (or update the paths in the notebooks).
-    * Run the `model_training/1_Nationality_Training.ipynb` and `model_training/3_Age_Training.ipynb` notebooks.
-    * This will save `nationality_model.h5` and `age_model.h5` in the `models/` folder.
-    * Place your existing `emotion_model.h5` in the `models/` folder.
-5.  **Run the Streamlit app:**
-    ```bash
-    streamlit run app.py
-    ```
-6.  Open `http://localhost:8501` in your browser.
+### Age
+- Overall metrics/curves
+    - ![Age Performance](assets/age_model_performance.png)
+    - ![Age Loss](assets/age_model_loss.png)
+- Scatter plot (Predicted vs True)
+    - ![Age Scatterplot](assets/age_model_scatterplot.png)
+
+### App screenshots
+- ![Result 1](results/r1.png)
+- ![Result 2](results/r2.png)
+- ![Result 3](results/r3.png)
+
+## How it works (high level)
+1) Face detection (OpenCV Haar Cascade)
+2) Nationality prediction (MobileNetV2 fine-tuned)
+3) Emotion prediction (CNN on 48x48 grayscale)
+4) Conditional steps:
+     - Indian: Age + Dress Color
+     - United States: Age only
+     - African: Dress Color only
+     - Other: None
+
+## Troubleshooting
+- TensorFlow import issues in VS Code: ensure the environment you selected has `tensorflow` installed.
+- On Windows, use a supported Python version for your TensorFlow release (commonly 3.8–3.11). If install fails, try creating a fresh venv.
+- If the app says a model file is missing, place the `.h5` into the top-level `models/` folder.
